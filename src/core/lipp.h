@@ -215,10 +215,12 @@ public:
         d.push(1);
 
         int max_depth = 1;
-        int sum_depth = 0, sum_nodes = 0;
+        int sum_depth = 0, sum_keys = 0;
+        int sum_nodes = 0;
         while (!s.empty()) {
             Node* node = s.top(); s.pop();
             int depth = d.top(); d.pop();
+            sum_nodes ++;
             for (int i = 0; i < node->num_items; i ++) {
                 if (BITMAP_GET(node->child_bitmap, i) == 1) {
                     s.push(node->items[i].comp.child);
@@ -226,12 +228,14 @@ public:
                 } else if (BITMAP_GET(node->none_bitmap, i) != 1) {
                     max_depth = std::max(max_depth, depth);
                     sum_depth += depth;
-                    sum_nodes ++;
+                    sum_keys ++;
                 }
             }
         }
 
-        printf("max_depth = %d, avg_depth = %.2lf\n", max_depth, double(sum_depth) / double(sum_nodes));
+        // printf("max_depth = %d, avg_depth = %.2lf\n", max_depth, double(sum_depth) / double(sum_keys));
+        printf("Number of Nodes\t%d\nAvg Number Keys per Npkvode\t%.2lf\nMax Depth\t%d\nAvg Depth\t%.2lf\n", 
+                sum_nodes, sum_keys * 1. / sum_nodes, max_depth, sum_depth * 1. / sum_keys);
     }
     void verify() const {
         std::stack<Node*> s;
@@ -263,6 +267,24 @@ public:
         #endif
     }
     size_t index_size() const {
+        std::stack<Node*> s;
+        s.push(root);
+
+        size_t size = 0;
+        while (!s.empty()) {
+            Node* node = s.top(); s.pop();
+            bool has_child = false;
+            for (int i = 0; i < node->num_items; i ++) {
+                if (BITMAP_GET(node->child_bitmap, i) == 1) {
+                    has_child = true;
+                    s.push(node->items[i].comp.child);
+                }
+            }
+            size += sizeof(Node) + sizeof(bitmap_t) * 2 * BITMAP_SIZE(node->num_items) + sizeof(Item) * node->num_items;
+        }
+        return size;
+    }
+    size_t model_size() const {
         std::stack<Node*> s;
         s.push(root);
 
